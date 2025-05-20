@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Game Spec Comparator</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <h1>Game Spec Comparator</h1>
+
+  <form id="specForm">
+    <fieldset>
+      <legend>System Specs</legend>
+
+      <label for="cpuInput">CPU Model:</label>
+      <select id="cpuInput" required></select>
+
+      <label for="gpuInput">GPU Model:</label>
+      <select id="gpuInput" required></select>
+
+      <label for="vramSystem">Dedicated VRAM (GB):</label>
+      <select id="vramSystem" required></select>
+
+      <label for="windowsSystem">Windows Version:</label>
+      <select id="windowsSystem" required></select>
+
+      <label for="storageSystem">Storage Capacity:</label>
+      <input type="text" id="storageSystem" placeholder="e.g., 512GB or 1TB" />
+    </fieldset>
+
+    <fieldset>
+      <legend>Game Specs</legend>
+
+      <label for="cpuGame">CPU Model:</label>
+      <select id="cpuGame" required></select>
+
+      <label for="gpuGame">GPU Model:</label>
+      <select id="gpuGame" required></select>
+
+      <label for="vramGame">Dedicated VRAM (GB):</label>
+      <select id="vramGame" required></select>
+
+      <label for="windowsGame">Windows Version:</label>
+      <select id="windowsGame" required></select>
+
+      <label for="storageGame">Storage Requirement:</label>
+      <input type="text" id="storageGame" placeholder="e.g., 256GB or 2TB" />
+    </fieldset>
+
+    <button type="submit">Compare Specs</button>
+  </form>
+
+  <div id="result" class="result"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>
