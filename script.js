@@ -200,7 +200,8 @@ const cpuRankings = {
   "core i3-1115g4": 3.5,
   "ryzen 7 5800u": 6,
   "ryzen 5 5600u": 5,
-  "ryzen 3 5300u": 3
+  "ryzen 3 5300u": 3,
+  
 };
 
 const gpuRankings = {
@@ -347,47 +348,53 @@ function populateDropdown(id, options) {
   }
 }
 
-function populateAllDropdowns() {
-  // Use consistent formatting for option display text:
-  const cpuOptions = Object.keys(cpuRankings).map(key => key.toUpperCase());
-  const gpuOptions = Object.keys(gpuRankings).map(key => key.toUpperCase());
-  const vramOptions = Object.keys(vramRankings).map(key => key.toUpperCase()); // Make consistent uppercase for display
-  const windowsOptions = Object.keys(windowsRankings).map(w => 
-    w.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
-  );
-
-  ["cpuInput", "cpuGame"].forEach(id => populateDropdown(id, cpuOptions));
-  ["gpuInput", "gpuGame"].forEach(id => populateDropdown(id, gpuOptions));
-  ["vramSystem", "vramGame"].forEach(id => populateDropdown(id, vramOptions));
-  ["windowsSystem", "windowsGame"].forEach(id => populateDropdown(id, windowsOptions));
-
-  // TODO: If you add storage dropdowns, populate here similarly
+// Generic function to populate dropdowns
+// Accepts an optionNormalizer callback to process option values if needed
+function populateDropdown(id, options, optionNormalizer = (opt) => opt) {
+  const select = document.getElementById(id);
+  select.innerHTML = ""; // Clear existing options
+  for (const option of options) {
+    const opt = document.createElement("option");
+    opt.value = optionNormalizer(option);
+    opt.textContent = option;
+    select.appendChild(opt);
+  }
 }
 
-// Helper function: normalize input keys for lookup
+function populateAllDropdowns() {
+  // CPU/GPU/Windows normalized options for lookups
+  const cpuOptions = Object.keys(cpuRankings).map(key => key.toUpperCase());
+  const gpuOptions = Object.keys(gpuRankings).map(key => key.toUpperCase());
+  const vramOptions = Object.keys(vramRankings); // keep as is for VRAM
+  const windowsOptions = Object.keys(windowsRankings).map(w => w.charAt(0).toUpperCase() + w.slice(1));
+
+  ["cpuInput", "cpuGame"].forEach(id => populateDropdown(id, cpuOptions, opt => opt.toLowerCase()));
+  ["gpuInput", "gpuGame"].forEach(id => populateDropdown(id, gpuOptions, opt => opt.toLowerCase()));
+  ["vramSystem", "vramGame"].forEach(id => populateDropdown(id, vramOptions));
+  ["windowsSystem", "windowsGame"].forEach(id => populateDropdown(id, windowsOptions, opt => opt.toLowerCase()));
+}
+
 function normalize(key) {
   return key.toLowerCase().trim();
 }
 
-// Helper function to generate status HTML with handling for missing selection
-function getStatusHtml(sysRank, gameRank, sysVal, noSelectMessage = "No selection") {
-  if (sysRank === 0 || sysVal === 0 || !sysVal) {
-    return `<span class="warning">${noSelectMessage}</span>`;
-  }
-  return sysRank >= gameRank
-    ? '<span class="pass">Meets</span>'
-    : '<span class="fail">Below</span>';
+function normalizeVram(value) {
+  return value.trim();
 }
-// Parses storage strings to numeric GB values (e.g. "1 TB" → 1024)
+
 function parseStorage(str) {
   if (!str) return 0;
   const s = str.toLowerCase().trim();
-  if (s.endsWith("tb")) {
-    return parseFloat(s) * 1024;
-  } else if (s.endsWith("gb")) {
-    return parseFloat(s);
-  }
+  if (s.endsWith("tb")) return parseFloat(s) * 1024;
+  if (s.endsWith("gb")) return parseFloat(s);
   return parseFloat(s) || 0;
+}
+
+function getStatusHtml(sysRank, gameRank, sysVal, noSelectMessage = "No selection") {
+  if (sysRank === 0 || sysVal === 0 || sysVal === "" || sysVal === null || sysVal === undefined) {
+    return `<span class="warning">${noSelectMessage}</span>`;
+  }
+  return sysRank >= gameRank ? '<span class="pass">Meets</span>' : '<span class="fail">Below</span>';
 }
 
 function compareSpecs(event) {
@@ -397,30 +404,29 @@ function compareSpecs(event) {
   const gpuSys = document.getElementById("gpuInput").value;
   const vramSys = document.getElementById("vramSystem").value;
   const winSys = document.getElementById("windowsSystem").value;
-  const storageSysStr = document.getElementById("storageSystem").value;
 
   const cpuGame = document.getElementById("cpuGame").value;
   const gpuGame = document.getElementById("gpuGame").value;
   const vramGame = document.getElementById("vramGame").value;
   const winGame = document.getElementById("windowsGame").value;
+
+  const storageSysStr = document.getElementById("storageSystem").value;
   const storageGameStr = document.getElementById("storageGame").value;
 
-  // Lookup rankings (fallback 0 if not found)
   const cpuSysRank = cpuRankings[normalize(cpuSys)] ?? 0;
   const gpuSysRank = gpuRankings[normalize(gpuSys)] ?? 0;
-  const vramSysRank = vramRankings[normalize(vramSys)] ?? 0;
+  const vramSysRank = vramRankings[normalizeVram(vramSys)] ?? 0;
   const winSysRank = windowsRankings[normalize(winSys)] ?? 0;
 
   const cpuGameRank = cpuRankings[normalize(cpuGame)] ?? 0;
   const gpuGameRank = gpuRankings[normalize(gpuGame)] ?? 0;
-  const vramGameRank = vramRankings[normalize(vramGame)] ?? 0;
+  const vramGameRank = vramRankings[normalizeVram(vramGame)] ?? 0;
   const winGameRank = windowsRankings[normalize(winGame)] ?? 0;
 
   const storageSys = parseStorage(storageSysStr);
   const storageGame = parseStorage(storageGameStr);
 
-  // Build table HTML
-  let resultHTML = `
+  const resultHTML = `
     <table>
       <thead>
         <tr>
@@ -433,20 +439,20 @@ function compareSpecs(event) {
       <tbody>
         <tr>
           <td>CPU</td>
-          <td>${cpuSys.toUpperCase()} (Score: ${cpuSysRank.toFixed(1)})</td>
-          <td>${cpuGame.toUpperCase()} (Score: ${cpuGameRank.toFixed(1)})</td>
+          <td>${cpuSys} (Score: ${cpuSysRank.toFixed(1)})</td>
+          <td>${cpuGame} (Score: ${cpuGameRank.toFixed(1)})</td>
           <td>${getStatusHtml(cpuSysRank, cpuGameRank, cpuSysRank, "No CPU selected")}</td>
         </tr>
         <tr>
           <td>GPU</td>
-          <td>${gpuSys.toUpperCase()} (Score: ${gpuSysRank})</td>
-          <td>${gpuGame.toUpperCase()} (Score: ${gpuGameRank})</td>
+          <td>${gpuSys} (Score: ${gpuSysRank})</td>
+          <td>${gpuGame} (Score: ${gpuGameRank})</td>
           <td>${getStatusHtml(gpuSysRank, gpuGameRank, gpuSysRank, "No GPU selected")}</td>
         </tr>
         <tr>
-          <td>Dedicated VRAM</td>
-          <td>${vramSys.toUpperCase()} (GB)</td>
-          <td>${vramGame.toUpperCase()} (GB)</td>
+          <td>Dedicated VRAM (GB)</td>
+          <td>${vramSys}</td>
+          <td>${vramGame}</td>
           <td>${getStatusHtml(vramSysRank, vramGameRank, vramSysRank, "No VRAM selected")}</td>
         </tr>
         <tr>
@@ -471,37 +477,17 @@ function compareSpecs(event) {
 
   let messages = [];
 
-  if (cpuSysRank === 0) {
-    messages.push("⚠️ No CPU selected for your system.");
-  } else if (cpuSysRank >= cpuGameRank) {
-    messages.push("✅ Your CPU meets or exceeds the game requirement.");
-  } else {
-    messages.push("❌ Your CPU does NOT meet the game requirement.");
+  function checkAndMessage(sysRank, gameRank, label, noSelectMsg) {
+    if (sysRank === 0) return `⚠️ No ${label} selected for your system.`;
+    return sysRank >= gameRank 
+      ? `✅ Your ${label} meets or exceeds the game requirement.` 
+      : `❌ Your ${label} does NOT meet the game requirement.`;
   }
 
-  if (gpuSysRank === 0) {
-    messages.push("⚠️ No GPU selected for your system.");
-  } else if (gpuSysRank >= gpuGameRank) {
-    messages.push("✅ Your GPU meets or exceeds the game requirement.");
-  } else {
-    messages.push("❌ Your GPU does NOT meet the game requirement.");
-  }
-
-  if (vramSysRank === 0) {
-    messages.push("⚠️ No VRAM selected for your system.");
-  } else if (vramSysRank >= vramGameRank) {
-    messages.push("✅ Your Dedicated VRAM meets or exceeds the game requirement.");
-  } else {
-    messages.push("❌ Your Dedicated VRAM does NOT meet the game requirement.");
-  }
-
-  if (winSysRank === 0) {
-    messages.push("⚠️ No Windows version selected for your system.");
-  } else if (winSysRank >= winGameRank) {
-    messages.push("✅ Your Windows version meets or exceeds the game requirement.");
-  } else {
-    messages.push("❌ Your Windows version does NOT meet the game requirement.");
-  }
+  messages.push(checkAndMessage(cpuSysRank, cpuGameRank, "CPU", "CPU"));
+  messages.push(checkAndMessage(gpuSysRank, gpuGameRank, "GPU", "GPU"));
+  messages.push(checkAndMessage(vramSysRank, vramGameRank, "Dedicated VRAM", "VRAM"));
+  messages.push(checkAndMessage(winSysRank, winGameRank, "Windows version", "Windows version"));
 
   if (storageSys === 0) {
     messages.push("⚠️ No storage value entered for your system.");
